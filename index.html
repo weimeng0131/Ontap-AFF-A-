@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>AFF A20 可用容量自动计算器</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI";
+      padding: 24px;
+      max-width: 720px;
+    }
+    select {
+      padding: 6px;
+      margin: 8px 0;
+      width: 240px;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .note {
+      margin-top: 12px;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<h2>AFF A20 可用容量计算器</h2>
+<p>（RAID-DP / ADPv2 / Balanced Spare，不含数据缩减）</p>
+
+<label>磁盘数量</label><br>
+<select id="diskCount"></select><br>
+
+<label>单盘容量</label><br>
+<select id="diskSize">
+  <option value="1.92">1.92 TB</option>
+  <option value="3.84">3.84 TB</option>
+  <option value="7.68">7.68 TB</option>
+  <option value="15.3">15.3 TB</option>
+  <option value="30.7">30.7 TB</option>
+</select>
+
+<div class="result" id="result"></div>
+
+<div class="note">
+  计算基于 ONTAP Fusion 行为反推，适用于 AFF A20。<br>
+  输出为物理可用容量（不含压缩/重删）。
+</div>
+
+<script>
+  // 生成磁盘数量选项（8 到 48，步长 2）
+  const diskCountSel = document.getElementById("diskCount");
+  for (let i = 8; i <= 48; i += 2) {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.text = i + " 块";
+    diskCountSel.appendChild(opt);
+  }
+
+  function calcK(n) {
+    if (n <= 12) {
+      return 7.24 * (n / 12);
+    } else if (n <= 24) {
+      return 7.24 + (n - 12) * (9.01 - 7.24) / 12;
+    } else {
+      return 9.01 + (n - 24) * (9.28 - 9.01) / 24;
+    }
+  }
+
+  function calc() {
+    const n = parseInt(diskCountSel.value);
+    const diskSize = parseFloat(document.getElementById("diskSize").value);
+
+    const K = calcK(n);
+    const usableTiB = diskSize * K;
+    const usableTB = usableTiB / 0.91;
+
+    document.getElementById("result").innerHTML =
+      "可用容量 ≈ " +
+      usableTiB.toFixed(2) + " TiB<br>" +
+      "≈ " + usableTB.toFixed(2) + " TB";
+  }
+
+  diskCountSel.onchange = calc;
+  document.getElementById("diskSize").onchange = calc;
+
+  diskCountSel.value = 12;
+  calc();
+</script>
+
+</body>
+</html>
