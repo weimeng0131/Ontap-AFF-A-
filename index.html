@@ -1,96 +1,548 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <title>AFF A20 可用容量自动计算器</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>容量自动计算器（对象 / AFF / FAS）</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI";
-      padding: 24px;
-      max-width: 720px;
+    :root { --border:#e6e6e6; --muted:#666; }
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+      margin:24px; background:#fff; color:#111;
     }
-    select {
-      padding: 6px;
-      margin: 8px 0;
-      width: 240px;
+    .wrap{ max-width:1020px; margin:0 auto; }
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:14px;
     }
-    .result {
-      margin-top: 20px;
-      font-size: 20px;
-      font-weight: bold;
+    .brand{ font-weight:900; font-size:18px; }
+    .btn{
+      border:1px solid var(--border); background:#fff;
+      padding:10px 14px; border-radius:12px; cursor:pointer;
+      font-weight:800;
     }
-    .note {
-      margin-top: 12px;
-      color: #666;
+    .btn:active{ transform:translateY(1px); }
+    .card{
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:18px;
+      background:#fff;
+    }
+    .grid3{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:14px;
+      margin-top:14px;
+    }
+    .tile{
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      cursor:pointer;
+      background:#fff;
+      min-height:120px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+    .tile h3{ margin:0; font-size:16px; }
+    .tile p{ margin:10px 0 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+    .badge{
+      display:inline-block;
+      background:#f6f6f6;
+      border:1px solid #e9e9e9;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      margin-bottom:10px;
+    }
+    .view{ display:none; }
+    .view.active{ display:block; }
+
+    /* shared form styles (AFF/FAS placeholder) */
+    .form{
+      display:grid;
+      grid-template-columns:180px 1fr;
+      gap:10px 12px;
+      align-items:center;
+      margin-top:10px;
+    }
+    label{ font-weight:900; }
+    select,input{
+      width:100%;
+      padding:9px 10px;
+      border:1px solid #d6d6d6;
+      border-radius:12px;
+      font-size:14px;
+      background:#fff;
+    }
+    .kpi{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+    .kpi .box{
+      border:1px solid #e8e8e8;
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+    }
+    .kpi .t{ color:var(--muted); font-size:12px; }
+    .kpi .v{ font-size:22px; font-weight:900; margin-top:6px; }
+    .hint{ color:var(--muted); font-size:12px; line-height:1.6; margin-top:10px; }
+    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
+    details{ margin-top:12px; }
+    summary{ cursor:pointer; font-weight:900; }
+
+    /* responsive */
+    @media (max-width:900px){
+      .grid3{ grid-template-columns:1fr; }
+      .form{ grid-template-columns:1fr; }
+    }
+
+    /* ---------- Object calculator styles (copied from your page; scoped) ---------- */
+    #objView body { margin:0; }
+    .obj-body{
+      margin:0; background:#f6f7f9; color:#111;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,
+      "PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+    }
+    .obj-wrap { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .obj-card {
+      background:#fff; border-radius: 14px; padding: 18px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    }
+    .obj-card h1 { font-size: 20px; margin: 0 0 6px; }
+    .obj-notice {
+      margin: 6px 0 14px;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-left: 4px solid #7aa7ff;
+      border-radius: 6px;
       font-size: 13px;
-      line-height: 1.5;
+      color: #333;
+    }
+    .obj-sub { margin: 0 0 16px; color:#555; font-size: 13px; }
+    .obj-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .obj-field { display:flex; flex-direction:column; gap: 6px; }
+    .obj-field label { font-size: 13px; color:#333; font-weight:400; }
+    .obj-card select {
+      font-size: 14px; padding: 10px;
+      border: 1px solid #d7dbe2; border-radius: 10px;
+      background:#fff;
+    }
+    .obj-row { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .obj-pill {
+      background:#f3f4f6; border-radius: 999px;
+      padding: 6px 10px; font-size: 12px; color:#444;
+    }
+    .obj-result {
+      margin-top: 14px; padding: 14px;
+      border-radius: 12px; background:#f1f6ff; border:1px solid #d7e5ff;
+    }
+    .obj-big { font-size: 26px; font-weight: 700; }
+    .obj-muted { font-size: 12px; color:#555; }
+    .obj-err {
+      margin-top: 12px; padding: 12px;
+      border-radius: 12px; background:#fff3f3;
+      border:1px solid #ffd0d0; color:#8a1f1f; display:none;
+    }
+    @media (max-width: 640px) {
+      .obj-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
+<div class="wrap">
 
-<h2>AFF A20 可用容量计算器</h2>
-<p>（RAID-DP / ADPv2 / Balanced Spare，不含数据缩减）</p>
+  <div class="topbar">
+    <div class="brand">容量自动计算器</div>
+    <button id="backBtn" class="btn" style="display:none;">← 返回首页</button>
+  </div>
 
-<label>磁盘数量</label><br>
-<select id="diskCount"></select><br>
+  <!-- HOME -->
+  <div id="home" class="view active">
+    <div class="card">
+      <div class="badge">先选类型，再进入对应工具</div>
+      <div class="grid3">
+        <div class="tile" data-target="obj">
+          <div>
+            <h3>对象存储可用容量计算</h3>
+            <p>节点内 RAID + 节点间 EC / 副本（输出 TB / TiB）。</p>
+          </div>
+          <div class="mono" style="color:#999;">进入 →</div>
+        </div>
 
-<label>单盘容量</label><br>
-<select id="diskSize">
-  <option value="1.92">1.92 TB</option>
-  <option value="3.84">3.84 TB</option>
-  <option value="7.68">7.68 TB</option>
-  <option value="15.3">15.3 TB</option>
-  <option value="30.7">30.7 TB</option>
-</select>
+        <div class="tile" data-target="aff">
+          <div>
+            <h3>AFF 存储可用容量计算</h3>
+            <p>A20｜RAID-DP｜盘数 8–48（步长2）｜盘型 1.92/3.84/7.68/15.3/30.7。</p>
+          </div>
+          <div class="mono" style="color:#999;">进入 →</div>
+        </div>
 
-<div class="result" id="result"></div>
+        <div class="tile" data-target="fas">
+          <div>
+            <h3>FAS 存储可用容量计算</h3>
+            <p>占位：等你确认 FAS 规则后补齐。</p>
+          </div>
+          <div class="mono" style="color:#999;">进入 →</div>
+        </div>
+      </div>
 
-<div class="note">
-  计算基于 ONTAP Fusion 行为反推，适用于 AFF A20。<br>
-  输出为物理可用容量（不含压缩/重删）。
+      <div class="hint">
+        说明：纯静态网页，可直接发布到 GitHub Pages。
+      </div>
+    </div>
+  </div>
+
+  <!-- OBJECT STORAGE (your calculator, unchanged logic) -->
+  <div id="obj" class="view">
+    <div class="obj-body">
+      <div class="obj-wrap">
+        <div class="obj-card">
+          <h1>对象存储容量计算器</h1>
+
+          <div class="obj-notice">
+            以下为 <strong>单站点</strong> 可用容量自动计算
+          </div>
+
+          <p class="obj-sub">
+            节点内 RAID + 节点间 EC / 副本（结果同时展示 TB / TiB）
+          </p>
+
+          <div class="obj-grid">
+
+            <div class="obj-field">
+              <label>节点数量（N）</label>
+              <select id="nodes"></select>
+            </div>
+
+            <div class="obj-field">
+              <label>节点内 RAID</label>
+              <select id="raid">
+                <option value="RAID5">RAID5</option>
+                <option value="RAID6" selected>RAID6</option>
+              </select>
+            </div>
+
+            <div class="obj-field">
+              <label>节点内磁盘数量（D）</label>
+              <select id="disks"></select>
+            </div>
+
+            <div class="obj-field">
+              <label>单盘容量（TB）</label>
+              <select id="diskSize">
+                <option>2</option>
+                <option>4</option>
+                <option>6</option>
+                <option>8</option>
+                <option>10</option>
+                <option>12</option>
+                <option>16</option>
+                <option selected>18</option>
+                <option>20</option>
+              </select>
+            </div>
+
+            <div class="obj-field">
+              <label>节点间数据保护模式</label>
+              <select id="mode">
+                <option value="ec" selected>纠删码（EC）</option>
+                <option value="replica">副本</option>
+              </select>
+            </div>
+
+            <div class="obj-field" id="ecField">
+              <label>EC 方式</label>
+              <select id="ec">
+                <option>2+1</option>
+                <option>4+1</option>
+                <option>6+1</option>
+                <option>4+2</option>
+                <option>6+2</option>
+                <option>8+2</option>
+                <option selected>6+3</option>
+                <option>9+3</option>
+                <option>7+5</option>
+              </select>
+            </div>
+
+            <div class="obj-field" id="replicaField" style="display:none;">
+              <label>副本数量</label>
+              <select id="replica">
+                <option value="2">2 副本</option>
+                <option value="3">3 副本</option>
+              </select>
+            </div>
+
+          </div>
+
+          <div class="obj-row" id="factorsRow"></div>
+          <div class="obj-err" id="errBox"></div>
+
+          <div class="obj-result">
+            <div class="obj-big">
+              <span id="usableTB">—</span>
+              <span style="font-size:14px;">（<span id="usableTiB">—</span>）</span>
+            </div>
+            <p class="obj-muted" id="detail"></p>
+          </div>
+
+          <p class="obj-muted" style="margin-top:10px;">
+            说明：TiB = TB × 0.91（二进制损耗换算）
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AFF -->
+  <div id="aff" class="view">
+    <div class="card">
+      <div class="badge">AFF A 系列（当前：A20）｜RAID-DP｜输出 TB + TiB</div>
+
+      <div class="form">
+        <label for="affModel">型号</label>
+        <select id="affModel">
+          <option value="A20">A20</option>
+        </select>
+
+        <label for="affDiskCount">磁盘数量</label>
+        <select id="affDiskCount"></select>
+
+        <label for="affDiskSize">单盘容量</label>
+        <select id="affDiskSize">
+          <option value="1.92">1.92 TB</option>
+          <option value="3.84">3.84 TB</option>
+          <option value="7.68">7.68 TB</option>
+          <option value="15.3">15.3 TB</option>
+          <option value="30.7">30.7 TB</option>
+        </select>
+
+        <label for="affRaid">RAID 方式</label>
+        <select id="affRaid" disabled>
+          <option value="DP">RAID-DP</option>
+        </select>
+      </div>
+
+      <div class="kpi">
+        <div class="box">
+          <div class="t">可用容量（TiB）</div>
+          <div id="affOutTiB" class="v">-</div>
+        </div>
+        <div class="box">
+          <div class="t">可用容量（TB）</div>
+          <div id="affOutTB" class="v">-</div>
+        </div>
+      </div>
+
+      <details>
+        <summary>查看计算明细</summary>
+        <pre id="affDetail" class="mono" style="white-space:pre-wrap;margin-top:10px;"></pre>
+      </details>
+
+      <div class="hint">
+        规则：分段线性插值系数 K（TiB/TB），锚点来自你提供的 Fusion 校准：<br/>
+        12盘 K=7.24；24盘 K=9.01；48盘 K=9.28；8~12 等比例缩放。<br/>
+        换算：TB = TiB / 0.91。
+      </div>
+    </div>
+  </div>
+
+  <!-- FAS placeholder -->
+  <div id="fas" class="view">
+    <div class="card">
+      <div class="badge">FAS（占位版）</div>
+      <div style="color:#333;">
+        你把 FAS 规则（盘型/容量、RAID、热备、WAFL、root/ADP 等）定下来后，我把这一页补成正式计算器。
+      </div>
+      <div class="hint mono" style="margin-top:12px;">TODO: FAS rules engine</div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-  // 生成磁盘数量选项（8 到 48，步长 2）
-  const diskCountSel = document.getElementById("diskCount");
-  for (let i = 8; i <= 48; i += 2) {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.text = i + " 块";
-    diskCountSel.appendChild(opt);
+  // ---------- NAV ----------
+  const views = ["home","obj","aff","fas"];
+  const backBtn = document.getElementById("backBtn");
+  function show(viewId){
+    views.forEach(v=>document.getElementById(v).classList.toggle("active", v===viewId));
+    backBtn.style.display = (viewId==="home") ? "none" : "inline-block";
+    if(viewId==="obj"){ try{ objCalc(); }catch(e){} } // ensure calc refresh
+    if(viewId==="aff"){ try{ renderAFF(); }catch(e){} }
+  }
+  document.querySelectorAll(".tile").forEach(tile=>{
+    tile.addEventListener("click", ()=> show(tile.dataset.target));
+  });
+  backBtn.addEventListener("click", ()=> show("home"));
+
+  // ---------- OBJECT CALCULATOR (UNCHANGED LOGIC, renamed calc fn to objCalc) ----------
+  const ecMinNodes = {
+    "2+1":3,"4+1":5,"6+1":7,
+    "4+2":6,"6+2":8,"8+2":10,
+    "6+3":9,"9+3":12,"7+5":12
+  };
+  const ecFactor = {
+    "2+1":2/3,"4+1":4/5,"6+1":6/7,
+    "4+2":4/6,"6+2":6/8,"8+2":8/10,
+    "6+3":6/9,"9+3":9/12,"7+5":7/12
+  };
+  const disksByRaid = {
+    "RAID5":[3,4,5,6,7,8,9,10,11,12],
+    "RAID6":[4,5,6,7,8,9,10,11,12]
+  };
+
+  const nodesSel = document.getElementById("nodes");
+  const raidSel = document.getElementById("raid");
+  const disksSel = document.getElementById("disks");
+  const diskSizeSel = document.getElementById("diskSize");
+  const modeSel = document.getElementById("mode");
+  const ecSel = document.getElementById("ec");
+  const replicaSel = document.getElementById("replica");
+  const ecField = document.getElementById("ecField");
+  const replicaField = document.getElementById("replicaField");
+  const usableTB = document.getElementById("usableTB");
+  const usableTiB = document.getElementById("usableTiB");
+  const detail = document.getElementById("detail");
+  const errBox = document.getElementById("errBox");
+  const factorsRow = document.getElementById("factorsRow");
+
+  if(nodesSel){
+    for (let i = 3; i <= 20; i++) nodesSel.add(new Option(i, i));
+    nodesSel.value = 8;
   }
 
-  function calcK(n) {
-    if (n <= 12) {
+  function refreshDisks() {
+    const list = disksByraidSafe(raidSel?.value);
+    const cur = +disksSel.value;
+    disksSel.innerHTML = "";
+    list.forEach(d => disksSel.add(new Option(d, d)));
+    disksSel.value = list.includes(cur) ? cur : list[0];
+  }
+
+  function disksByraidSafe(r){
+    return disksByRaid[r] || disksByRaid["RAID6"];
+  }
+
+  function raidFactor(r, d) {
+    return r === "RAID5" ? (d - 1) / d : (d - 2) / d;
+  }
+
+  function objCalc() {
+    if(!nodesSel) return;
+
+    const N = +nodesSel.value;
+    const D = +disksSel.value;
+    const S = +diskSizeSel.value;
+    const raw = N * D * S;
+    const rf = raidFactor(raidSel.value, D);
+
+    factorsRow.innerHTML = `<span class="obj-pill">RAID ${rf.toFixed(3)}</span>`;
+
+    if (modeSel.value === "replica") {
+      ecField.style.display = "none";
+      replicaField.style.display = "";
+      const u = raw * rf / (+replicaSel.value);
+      usableTB.textContent = u.toFixed(0) + " TB";
+      usableTiB.textContent = (u * 0.91).toFixed(0) + " TiB";
+      detail.textContent = `原始 ${raw} × RAID ${rf.toFixed(3)} ÷ 副本`;
+      errBox.style.display = "none";
+      return;
+    }
+
+    ecField.style.display = "";
+    replicaField.style.display = "none";
+
+    const ec = ecSel.value;
+    if (N < ecMinNodes[ec]) {
+      errBox.style.display = "block";
+      errBox.textContent = `${ec} 至少需要 ${ecMinNodes[ec]} 个节点`;
+      usableTB.textContent = "—";
+      usableTiB.textContent = "—";
+      detail.textContent = "";
+      return;
+    }
+
+    errBox.style.display = "none";
+    const ef = ecFactor[ec];
+    const u = raw * rf * ef;
+
+    factorsRow.innerHTML += `<span class="obj-pill">EC ${ef.toFixed(3)}</span>`;
+    usableTB.textContent = u.toFixed(0) + " TB";
+    usableTiB.textContent = (u * 0.91).toFixed(0) + " TiB";
+    detail.textContent = `原始 ${raw} × RAID ${rf.toFixed(3)} × EC ${ef.toFixed(3)}`;
+  }
+
+  if(raidSel){
+    raidSel.onchange = () => { refreshDisks(); objCalc(); };
+    [nodesSel, disksSel, diskSizeSel, modeSel, ecSel, replicaSel].forEach(e => e && (e.onchange = objCalc));
+    refreshDisks();
+    objCalc();
+  }
+
+  // ---------- AFF CALCULATOR ----------
+  const affDiskCountSel = document.getElementById("affDiskCount");
+  const affDiskSizeSel = document.getElementById("affDiskSize");
+  const affOutTiB = document.getElementById("affOutTiB");
+  const affOutTB  = document.getElementById("affOutTB");
+  const affDetail = document.getElementById("affDetail");
+
+  for(let n=8; n<=48; n+=2){
+    const opt = document.createElement("option");
+    opt.value = String(n);
+    opt.textContent = `${n} 块`;
+    affDiskCountSel.appendChild(opt);
+  }
+  affDiskCountSel.value = "12";
+
+  function calcK(n){
+    // Fusion-calibrated anchors for A20 (TiB per TB)
+    // 12 -> 7.24 ; 24 -> 9.01 ; 48 -> 9.28
+    if(n <= 12){
       return 7.24 * (n / 12);
-    } else if (n <= 24) {
+    }else if(n <= 24){
       return 7.24 + (n - 12) * (9.01 - 7.24) / 12;
-    } else {
+    }else{
       return 9.01 + (n - 24) * (9.28 - 9.01) / 24;
     }
   }
 
-  function calc() {
-    const n = parseInt(diskCountSel.value);
-    const diskSize = parseFloat(document.getElementById("diskSize").value);
+  function renderAFF(){
+    const n = parseInt(affDiskCountSel.value, 10);
+    const diskTB = parseFloat(affDiskSizeSel.value);
 
     const K = calcK(n);
-    const usableTiB = diskSize * K;
+    const usableTiB = diskTB * K;
     const usableTB = usableTiB / 0.91;
 
-    document.getElementById("result").innerHTML =
-      "可用容量 ≈ " +
-      usableTiB.toFixed(2) + " TiB<br>" +
-      "≈ " + usableTB.toFixed(2) + " TB";
+    affOutTiB.textContent = `${usableTiB.toFixed(2)} TiB`;
+    affOutTB.textContent  = `${usableTB.toFixed(2)} TB`;
+
+    const rawTB = n * diskTB;
+    const rawTiB = rawTB * 0.91;
+
+    affDetail.textContent =
+`型号: AFF A20
+RAID: RAID-DP
+磁盘数量: ${n}
+单盘容量: ${diskTB} TB
+
+分段系数 K(n) = ${K.toFixed(4)} (TiB / TB)
+可用容量（TiB）= 单盘容量 × K = ${diskTB} × ${K.toFixed(4)} = ${usableTiB.toFixed(2)} TiB
+可用容量（TB）= TiB / 0.91 = ${usableTB.toFixed(2)} TB
+
+物理校验（红线）:
+Raw ≈ ${rawTB.toFixed(2)} TB / ${rawTiB.toFixed(2)} TiB
+Usable < Raw  ✅`;
   }
 
-  diskCountSel.onchange = calc;
-  document.getElementById("diskSize").onchange = calc;
-
-  diskCountSel.value = 12;
-  calc();
+  affDiskCountSel.addEventListener("change", renderAFF);
+  affDiskSizeSel.addEventListener("change", renderAFF);
+  renderAFF();
 </script>
-
 </body>
 </html>
